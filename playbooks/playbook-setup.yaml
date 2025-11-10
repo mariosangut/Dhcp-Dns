@@ -1,0 +1,91 @@
+---
+# ======================================================
+# TIME AND DATE
+# ======================================================
+- name: Configuring time-zone and .log
+  hosts: all
+  become: true
+  tasks:
+    - name: Synchronize system time
+      ansible.builtin.command: timedatectl set-timezone Europe/Madrid
+      changed_when: false
+
+    - name: Ensure system clock is synchronized
+      ansible.builtin.apt:
+        name: chrony
+        state: present
+        update_cache: true
+
+    - name: Start and enable chrony
+      ansible.builtin.systemd:
+        name: chronyd
+        state: started
+        enabled: true
+# ======================================================
+# SERVERS CONFIGURATION
+# ======================================================
+- name: Configuring servers
+  hosts: all
+  become: true
+  tasks:
+    - name: Changing DNS # añadimos servidor de google para poder resovler los dominios de la instalacion de paquetes
+      when: inventory_hostname in ["servers"]
+      ansible.builtin.copy:
+        src: ../files/resolv.conf
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: "0644" # permisos en octal
+        backup: true
+
+    - name: Updating and installing
+      when: inventory_hostname in ["servers"]
+      ansible.builtin.apt:
+        update_cache: true # Actualizar
+        name: isc-dhcp-server
+        state: present
+
+    - name: Configuring listen network adapter
+      when: inventory_hostname in ["dhcp"]
+      ansible.builtin.copy:
+        src: ../files/listen
+        dest: /etc/default/isc-dhcp-server
+        owner: root
+        group: root
+        mode: "0644" # permisos en octal
+        backup: true
+
+    - name: Configuring configuration file dhcpd.conf
+      when: inventory_hostname in ["dhcp"]
+      ansible.builtin.copy:
+        src: ../files/dhcpd.conf
+        dest: /etc/dhcp/dhcpd.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+
+    - name: Enabling the service
+      when: inventory_hostname in ["dhcp"]
+      ansible.builtin.systemd:
+        name: isc-dhcp-server
+        enabled: true
+
+    - name: Restarting the service
+      when: inventory_hostname in ["dhcp"]
+      ansible.builtin.systemd:
+        name: isc-dhcp-server
+        state: restarted
+
+    - name: Install rsyslog
+      when: inventory_hostname in ["server"]
+      ansible.builtin.apt:
+        name: rsyslog
+        state: present
+        update_cache: true
+
+    - name: Enable and start rsyslog service
+      when: inventory_hostname in ["server"]
+      ansible.builtin.systemd:
+        name: rsyslog
+        enabled: true
