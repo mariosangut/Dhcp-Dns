@@ -27,8 +27,8 @@ Vagrant.configure("2") do |config|
   end #c1
 
   # Provisioning con Ansible
-  config.vm.provision "ansible" do |ansible|
-    ansible.compatibility_mode = "auto"
-    ansible.playbook = "playbooks/playbook-setup.yaml"
+  #config.vm.provision "ansible" do |ansible|
+  #  ansible.compatibility_mode = "auto"
+  #  ansible.playbook = "playbooks/playbook-setup.yaml"
   end
 end
