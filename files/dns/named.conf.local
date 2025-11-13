@@ -1,0 +1,9 @@
+zone "mario.test" {
+        type master;
+        file "/var/lib/bind/mario.test.dns";
+};
+
+zone "58.168.192.in-addr.arpa" {
+        type master;
+        file "/var/lib/bind/mario.test.rev";
+};
