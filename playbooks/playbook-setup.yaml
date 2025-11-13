@@ -1,5 +1,23 @@
 ---
+# 
 # ======================================================
+# SERVERS CONFIGURATION
+# ======================================================
+- name: Configuring servers
+  hosts: all
+  become: true
+  tasks:
+    - name: Changing DNS # añadimos servidor de google para poder resovler los dominios de la instalacion de paquetes
+      when: inventory_hostname in ["servers"]
+      ansible.builtin.copy:
+        src: ../files/resolv.conf
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: "0644" # permisos en octal
+        backup: true
+
+#======================================================
 # GLOBAL CONFIGURATION
 # ======================================================
 - name: Configuring time-zone and .log
@@ -18,38 +36,23 @@
 
     - name: Start and enable chrony
       ansible.builtin.systemd:
-        name: chronyd
+        name: chrony
         state: started
         enabled: true
 
     - name: Install rsyslog
-      when: inventory_hostname in ["server"]
+      when: inventory_hostname in ["servers"]
       ansible.builtin.apt:
         name: rsyslog
         state: present
         update_cache: true
 
     - name: Enable and start rsyslog service
-      when: inventory_hostname in ["server"]
+      when: inventory_hostname in ["servers"]
       ansible.builtin.systemd:
         name: rsyslog
         enabled: true
-# ======================================================
-# SERVERS CONFIGURATION
-# ======================================================
-- name: Configuring servers
-  hosts: all
-  become: true
-  tasks:
-    - name: Changing DNS # añadimos servidor de google para poder resovler los dominios de la instalacion de paquetes
-      when: inventory_hostname in ["servers"]
-      ansible.builtin.copy:
-        src: ../files/resolv.conf
-        dest: /etc/resolv.conf
-        owner: root
-        group: root
-        mode: "0644" # permisos en octal
-        backup: true
+
 
 # ======================================================
 # DHCP SERVER CONFIGURATION
