@@ -1,0 +1,16 @@
+;
+; BIND data file for local loopback interface
+;
+$TTL	604800
+@	IN	SOA	ns.mario.test. root.mario.test. (
+			      2		; Serial
+			 604800		; Refresh
+			  86400		; Retry
+			2419200		; Expire
+			 604800 )	; Negative Cache TTL
+;
+@	in	A	192.168.56.10
+@	IN	NS	ns
+@	IN	NS	ns2
+ns	IN	A	192.168.56.10
+ns2	IN	A	192.168.56.11
