@@ -1,0 +1,22 @@
+- name: Configuring
+  hosts: all 
+  become: true
+  tasks:
+    - name: Check TSIG key exist
+      stat: 
+        path: /etc/bind/ddns.key
+      register: key_file
+
+    - name: Create TSIG key if not exist
+      command: tsig-keygen -a hmac-sha256 ddns-key
+      register: tsig_output
+      when: not key_file.stat.exists
+
+    - name: Save TSIG key in /etc/bind/ddns.key
+      copy:
+        content: "{{ tsig_output.stdout }}"
+        dest: /etc/bind/ddns.key
+        owner: bind
+        group: bind
+        mode: '0600'
+      when: not key_file.stat.exists

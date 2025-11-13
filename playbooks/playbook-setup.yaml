@@ -1,6 +1,6 @@
 ---
 # ======================================================
-# TIME AND DATE
+# GLOBAL CONFIGURATION
 # ======================================================
 - name: Configuring time-zone and .log
   hosts: all
@@ -20,6 +20,19 @@
       ansible.builtin.systemd:
         name: chronyd
         state: started
+        enabled: true
+
+    - name: Install rsyslog
+      when: inventory_hostname in ["server"]
+      ansible.builtin.apt:
+        name: rsyslog
+        state: present
+        update_cache: true
+
+    - name: Enable and start rsyslog service
+      when: inventory_hostname in ["server"]
+      ansible.builtin.systemd:
+        name: rsyslog
         enabled: true
 # ======================================================
 # SERVERS CONFIGURATION
@@ -45,6 +58,9 @@
         name: isc-dhcp-server
         state: present
 
+# ======================================================
+# DHCP SERVER CONFIGURATION
+# ======================================================
     - name: Configuring listen network adapter
       when: inventory_hostname in ["dhcp"]
       ansible.builtin.copy:
@@ -77,15 +93,8 @@
         name: isc-dhcp-server
         state: restarted
 
-    - name: Install rsyslog
-      when: inventory_hostname in ["server"]
-      ansible.builtin.apt:
-        name: rsyslog
-        state: present
-        update_cache: true
+# ======================================================
+# DNS SERVER CONFIGURATION
+# ======================================================
 
-    - name: Enable and start rsyslog service
-      when: inventory_hostname in ["server"]
-      ansible.builtin.systemd:
-        name: rsyslog
-        enabled: true
+
