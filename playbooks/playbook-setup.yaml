@@ -112,15 +112,36 @@
         name: bind9 
         state: present
 
-    - name: Configuring configuration file dhcpd.conf
-      when: inventory_hostname == "dhcp"
+    - name: Configuring local zones file
+      when: inventory_hostname == "dns"
       ansible.builtin.copy:
-        src: ../files/dns/
-        dest: /etc/dhcp/dhcpd.conf
+        src: ../files/dns/named.conf.local
+        dest: /etc/bind/named.conf.local
         owner: root
-        group: root
-        mode: "0644"
+        group: bind
+        mode: "0622" #  I have taken the file from the last exercise as an example.
         backup: true
+
+    - name: Configuring direct zone file 
+      when: inventory_hostname == "dns"
+      ansible.builtin.copy:
+        src: ../files/dns/db.mario.test
+        dest: /var/lib/bind/db.mario.test
+        owner: root
+        group: bind
+        mode: "0622"
+        backup: true
+
+    - name: Configuring reverse zone file 
+      when: inventory_hostname == "dns"
+      ansible.builtin.copy:
+        src: ../files/dns/db.127
+        dest: /var/lib/bind/db.127
+        owner: root
+        group: bind
+        mode: "0622"
+        backup: true
+
 
     - name: Enabling the service
       when: inventory_hostname == "dns"
