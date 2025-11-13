@@ -51,6 +51,14 @@
         mode: "0644" # permisos en octal
         backup: true
 
+# ======================================================
+# DHCP SERVER CONFIGURATION
+# ======================================================
+- name: Configuring DHCP server
+  hosts: all
+  become: true
+  tasks:
+  
     - name: Updating and installing
       when: inventory_hostname in ["servers"]
       ansible.builtin.apt:
@@ -58,13 +66,10 @@
         name: isc-dhcp-server
         state: present
 
-# ======================================================
-# DHCP SERVER CONFIGURATION
-# ======================================================
     - name: Configuring listen network adapter
-      when: inventory_hostname in ["dhcp"]
+      when: inventory_hostname == "dhcp"
       ansible.builtin.copy:
-        src: ../files/listen
+        src: ../files/dhcp/listen
         dest: /etc/default/isc-dhcp-server
         owner: root
         group: root
@@ -72,9 +77,9 @@
         backup: true
 
     - name: Configuring configuration file dhcpd.conf
-      when: inventory_hostname in ["dhcp"]
+      when: inventory_hostname == "dhcp"
       ansible.builtin.copy:
-        src: ../files/dhcpd.conf
+        src: ../files/dhcp/dhcpd.conf
         dest: /etc/dhcp/dhcpd.conf
         owner: root
         group: root
@@ -82,13 +87,13 @@
         backup: true
 
     - name: Enabling the service
-      when: inventory_hostname in ["dhcp"]
+      when: inventory_hostname == "dhcp"
       ansible.builtin.systemd:
         name: isc-dhcp-server
         enabled: true
 
     - name: Restarting the service
-      when: inventory_hostname in ["dhcp"]
+      when: inventory_hostname == "dhcp"
       ansible.builtin.systemd:
         name: isc-dhcp-server
         state: restarted
@@ -96,5 +101,36 @@
 # ======================================================
 # DNS SERVER CONFIGURATION
 # ======================================================
+- name: Configuring DNS server
+  hosts: all
+  become: true
+  tasks:
+    - name: Updating and installing
+      when: inventory_hostname in ["dns"]
+      ansible.builtin.apt:
+        update_cache: true # Actualizar
+        name: bind9 
+        state: present
 
+    - name: Configuring configuration file dhcpd.conf
+      when: inventory_hostname == "dhcp"
+      ansible.builtin.copy:
+        src: ../files/dns/
+        dest: /etc/dhcp/dhcpd.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+
+    - name: Enabling the service
+      when: inventory_hostname == "dns"
+      ansible.builtin.systemd:
+        name: bind9
+        enabled: true
+
+    - name: Restarting the service
+      when: inventory_hostname == "dns"
+      ansible.builtin.systemd:
+        name: bind9
+        state: restarted
 
