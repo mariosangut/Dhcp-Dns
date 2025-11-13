@@ -8,7 +8,7 @@
   become: true
   tasks:
     - name: Changing DNS # añadimos servidor de google para poder resovler los dominios de la instalacion de paquetes
-      when: inventory_hostname in ["servers"]
+      when: "'servers' in group_names"
       ansible.builtin.copy:
         src: ../files/resolv.conf
         dest: /etc/resolv.conf
@@ -41,14 +41,14 @@
         enabled: true
 
     - name: Install rsyslog
-      when: inventory_hostname in ["servers"]
+      when: "'servers' in group_names"
       ansible.builtin.apt:
         name: rsyslog
         state: present
         update_cache: true
 
     - name: Enable and start rsyslog service
-      when: inventory_hostname in ["servers"]
+      when: "'servers' in group_names"
       ansible.builtin.systemd:
         name: rsyslog
         enabled: true
@@ -63,7 +63,7 @@
   tasks:
   
     - name: Updating and installing
-      when: inventory_hostname in ["servers"]
+      when: "'servers' in group_names"
       ansible.builtin.apt:
         update_cache: true # Actualizar
         name: isc-dhcp-server
