@@ -85,7 +85,8 @@
 # ======================================================
 # CREATE TSIGG KEY
 # ======================================================
-- name: Ensure TSIG key exists (DNS)
+---
+- name: Generate TSIG key on DNS
   hosts: dns
   become: true
   tasks:
@@ -97,26 +98,26 @@
         group: bind
         mode: "0755"
 
-    - name: Check TSIG key exists
+    - name: Check if TSIG key already exists
       ansible.builtin.stat:
-        path: /etc/bind/named.conf.options
-      register: key_file
+        path: /etc/bind/ddns.key
+      register: tsig_stat
 
-    - name: Create TSIG key if not exist
+    - name: Generate TSIG key (only if missing)
       ansible.builtin.command: tsig-keygen -a hmac-sha256 ddns-key
       register: tsig_output
-      when: not key_file.stat.exists
+      when: not tsig_stat.stat.exists
 
-    - name: Save TSIG key to /etc/bind/named.conf.options
+    - name: Save TSIG key to file
       ansible.builtin.copy:
+        dest: /etc/bind/ddns.key
         content: "{{ tsig_output.stdout }}"
-        dest: /etc/bind/named.conf.options
         owner: bind
         group: bind
         mode: "0600"
-      when: not key_file.stat.exists
+      when: not tsig_stat.stat.exists
 
-- name: Ensure TSIG key exists (DHCP)
+- name: Copy TSIG key from DNS to DHCP
   hosts: dhcp
   become: true
   tasks:
@@ -128,27 +129,20 @@
         group: root
         mode: "0755"
 
-    - name: Check TSIG key exists
-      ansible.builtin.stat:
-        path: /etc/dhcp/ddns.key
-      register: key_file
-
-    - name: Copy TSIG key from DNS if not exist
+    - name: Fetch TSIG key file from DNS
       ansible.builtin.fetch:
-        src: /etc/bind/named.conf.options
+        src: /etc/bind/ddns.key
         dest: /tmp/ddns.key
         flat: true
-      when: not key_file.stat.exists
       delegate_to: dns
 
-    - name: Move TSIG key to /etc/dhcp
+    - name: Copy TSIG key into DHCP directory
       ansible.builtin.copy:
         src: /tmp/ddns.key
         dest: /etc/dhcp/ddns.key
         owner: root
         group: root
         mode: "0600"
-      when: not key_file.stat.exists
 
 # ======================================================
 # DNS SERVER CONFIGURATION
