@@ -1,14 +1,12 @@
 ---
-# 
 # ======================================================
 # SERVERS CONFIGURATION
 # ======================================================
-- name: Configuring servers
-  hosts: all
+- name: TASK 1. Configuring servers
+  hosts: servers
   become: true
   tasks:
     - name: Changing DNS # añadimos servidor de google para poder resovler los dominios de la instalacion de paquetes
-      when: "'servers' in group_names"
       ansible.builtin.copy:
         src: ../files/resolv.conf
         dest: /etc/resolv.conf
@@ -16,6 +14,12 @@
         group: root
         mode: "0644" # permisos en octal
         backup: true
+        
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    
 
 #======================================================
 # GLOBAL CONFIGURATION
@@ -32,11 +36,11 @@
       ansible.builtin.apt:
         name: chrony
         state: present
-        update_cache: true
+        update_cache: false
 
     - name: Start and enable chrony
       ansible.builtin.systemd:
-        name: chrony
+        name: chronyd
         state: started
         enabled: true
 
@@ -45,42 +49,124 @@
       ansible.builtin.apt:
         name: rsyslog
         state: present
-        update_cache: true
+        update_cache: false
 
     - name: Enable and start rsyslog service
-      when: "'servers' in group_names"
       ansible.builtin.systemd:
         name: rsyslog
         enabled: true
 
+#======================================================
+# INSTALL ISC-DHCP-SERVER & BIND9 
+# ======================================================
+# Aunque tengamos un playbook the configuracion, primero instalamos los servicios
+# para que a la hora de crear la clave no nos de problemas
+
+- name: Installing DHCP server
+  hosts: dhcp
+  become: true
+  tasks:
+    - name: Isc-dhcp-server
+      ansible.builtin.apt:
+        update_cache: false # Actualizar
+        name: isc-dhcp-server
+        state: present
+
+- name: Installing dns server
+  hosts: dns
+  become: true
+  tasks:
+    - name: Bind9
+      ansible.builtin.apt:
+        update_cache: false # Actualizar
+        name: bind9
+        state: present
+
+# ======================================================
+# CREATE TSIGG KEY
+# ======================================================
+- name: Ensure TSIG key exists (DNS)
+  hosts: dns
+  become: true
+  tasks:
+    - name: Ensure /etc/bind exists
+      ansible.builtin.file:
+        path: /etc/bind
+        state: directory
+        owner: bind
+        group: bind
+        mode: "0755"
+
+    - name: Check TSIG key exists
+      ansible.builtin.stat:
+        path: /etc/bind/ddns.key
+      register: key_file
+
+    - name: Create TSIG key if not exist
+      ansible.builtin.command: tsig-keygen -a hmac-sha256 ddns-key
+      register: tsig_output
+      when: not key_file.stat.exists
+
+    - name: Save TSIG key to /etc/bind/ddns.key
+      ansible.builtin.copy:
+        content: "{{ tsig_output.stdout }}"
+        dest: /etc/bind/ddns.key
+        owner: bind
+        group: bind
+        mode: "0600"
+      when: not key_file.stat.exists
+
+- name: Ensure TSIG key exists (DHCP)
+  hosts: dhcp
+  become: true
+  tasks:
+    - name: Ensure /etc/dhcp exists
+      ansible.builtin.file:
+        path: /etc/dhcp
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Check TSIG key exists
+      ansible.builtin.stat:
+        path: /etc/dhcp/ddns.key
+      register: key_file
+
+    - name: Copy TSIG key from DNS if not exist
+      ansible.builtin.fetch:
+        src: /etc/bind/ddns.key
+        dest: /tmp/ddns.key
+        flat: true
+      when: not key_file.stat.exists
+      delegate_to: dns
+
+    - name: Move TSIG key to /etc/dhcp
+      ansible.builtin.copy:
+        src: /tmp/ddns.key
+        dest: /etc/dhcp/ddns.key
+        owner: root
+        group: root
+        mode: "0600"
+      when: not key_file.stat.exists
 
 # ======================================================
 # DHCP SERVER CONFIGURATION
 # ======================================================
 - name: Configuring DHCP server
-  hosts: all
+  hosts: dhcp
   become: true
   tasks:
-  
-    - name: Updating and installing
-      when: "'servers' in group_names"
-      ansible.builtin.apt:
-        update_cache: true # Actualizar
-        name: isc-dhcp-server
-        state: present
-
     - name: Configuring listen network adapter
-      when: inventory_hostname == "dhcp"
       ansible.builtin.copy:
         src: ../files/dhcp/listen
         dest: /etc/default/isc-dhcp-server
         owner: root
         group: root
-        mode: "0644" # permisos en octal
+        mode: "0644" 
         backup: true
 
-    - name: Configuring configuration file dhcpd.conf
-      when: inventory_hostname == "dhcp"
+    - name: Configuring dhcpd.conf file
       ansible.builtin.copy:
         src: ../files/dhcp/dhcpd.conf
         dest: /etc/dhcp/dhcpd.conf
@@ -89,72 +175,60 @@
         mode: "0644"
         backup: true
 
-    - name: Enabling the service
-      when: inventory_hostname == "dhcp"
-      ansible.builtin.systemd:
-        name: isc-dhcp-server
-        enabled: true
+    - name: Validate dhcpd.conf
+      ansible.builtin.command: dhcpd -t -cf /etc/dhcp/dhcpd.conf
 
-    - name: Restarting the service
-      when: inventory_hostname == "dhcp"
+    - name: Enabling the service and restarting the service
       ansible.builtin.systemd:
         name: isc-dhcp-server
         state: restarted
+        enabled: true
 
 # ======================================================
 # DNS SERVER CONFIGURATION
 # ======================================================
 - name: Configuring DNS server
-  hosts: all
+  hosts: dns
   become: true
   tasks:
-    - name: Updating and installing
-      when: inventory_hostname in ["dns"]
-      ansible.builtin.apt:
-        update_cache: true # Actualizar
-        name: bind9 
-        state: present
-
     - name: Configuring local zones file
-      when: inventory_hostname == "dns"
       ansible.builtin.copy:
         src: ../files/dns/named.conf.local
         dest: /etc/bind/named.conf.local
         owner: root
         group: bind
-        mode: "0622" #  I have taken the file from the last exercise as an example.
+        mode: "0640"  # root puede leer/escribir, bind puede leer, nadie más puede
         backup: true
 
-    - name: Configuring direct zone file 
-      when: inventory_hostname == "dns"
+    - name: Configuring direct zone file
       ansible.builtin.copy:
         src: ../files/dns/db.mario.test
         dest: /var/lib/bind/db.mario.test
         owner: root
         group: bind
-        mode: "0622"
+        mode: "0640"  # root puede leer/escribir, bind puede leer, nadie más puede
         backup: true
 
-    - name: Configuring reverse zone file 
-      when: inventory_hostname == "dns"
+    - name: Configuring reverse zone file
       ansible.builtin.copy:
         src: ../files/dns/db.127
         dest: /var/lib/bind/db.127
         owner: root
         group: bind
-        mode: "0622"
+        mode: "0640"  # root puede leer/escribir, bind puede leer, nadie más puede
         backup: true
 
+    - name: Validate named configuration
+      ansible.builtin.command: named-checkconf /etc/bind/named.conf.local
 
-    - name: Enabling the service
-      when: inventory_hostname == "dns"
-      ansible.builtin.systemd:
-        name: bind9
-        enabled: true
+    - name: Validate direct zone
+      ansible.builtin.command: named-checkzone "mario.test" /var/lib/bind/db.mario.test
 
-    - name: Restarting the service
-      when: inventory_hostname == "dns"
+    - name: Validate reverse zone
+      ansible.builtin.command: named-checkzone "58.168.192.in-addr.arpa" /var/lib/bind/db.127
+
+    - name: Enabling the service and restarting the service
       ansible.builtin.systemd:
         name: bind9
         state: restarted
-
+        enabled: true
