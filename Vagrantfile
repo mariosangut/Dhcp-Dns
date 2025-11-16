@@ -23,7 +23,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "c1" do |c1|
     c1.vm.hostname = "cliente1"
-    c1.vm.network "private_network", type: "dhcp", virtualbox__intnet: "internal" #auto_config: false
+    c1.vm.network "private_network", type: "dhcp", virtualbox__intnet: "internal", auto_config: false
   end #c1
 
   # Provisioning con Ansible
