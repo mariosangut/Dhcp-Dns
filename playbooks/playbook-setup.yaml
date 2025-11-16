@@ -42,7 +42,6 @@
         enabled: true
 
     - name: Install rsyslog on servers
-      when: "'servers' in group_names"
       ansible.builtin.apt:
         name: rsyslog
         state: present
