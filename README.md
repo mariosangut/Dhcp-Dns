@@ -69,8 +69,6 @@ Thanks to DDNS, the DHCP server automatically registers the following records on
 
 The environment is fully automated using **Vagrant** and **Ansible**, allowing for reproducible, test-ready implementation.
 
-Translated with DeepL.com (free version)
-
 ---
 
 ### Project Structure
