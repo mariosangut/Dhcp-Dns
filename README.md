@@ -189,7 +189,7 @@ This produces a key stored at:
 /etc/bind/ddns.key
 ```
 
-*(The actual secret is omitted and replaced with `[redacted]`.)*
+*(The actual secret is omitted and replaced with `[redacted]`)*
 
 ### 5.1.2. TSIG Key Definition in BIND9
 
