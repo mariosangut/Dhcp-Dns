@@ -1,11 +1,11 @@
 zone "mario.test" IN {
         type master;
         file "/var/lib/bind/db.mario.test";
-         allow-update { key "ddns-key"; };
+        allow-update { key "ddns-key"; };
 };
 
 zone "58.168.192.in-addr.arpa" IN {
         type master;
-        file "/var/lib/bind/db.127";
+        file "/var/lib/bind/db.192";
         allow-update { key "ddns-key"; };
 };

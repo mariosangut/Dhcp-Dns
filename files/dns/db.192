@@ -2,14 +2,14 @@
 ; BIND reverse data file for local loopback interface
 ;
 $TTL	604800
-@	IN	SOA	ns.mario.test. root.mario.test. (
+@	IN	SOA	dns.mario.test. root.mario.test. (
 			      1		; Serial
 			 604800		; Refresh
 			  86400		; Retry
 			2419200		; Expire
 			 604800 )	; Negative Cache TTL
 ;
-@	IN	NS	ns.mario.test.
-@	IN	NS	ns2.mario.test.
-10	IN	PTR	ns.mario.test.
-11	IN	PTR	ns.mario.test.
+@	IN	NS	dns.mario.test.
+
+
+

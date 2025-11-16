@@ -10,13 +10,13 @@ Vagrant.configure("2") do |config|
   end # vb
 
   config.vm.define "dns" do |dns|
-    dns.vm.hostname = "dns.msg.izv"
+    dns.vm.hostname = "dns"
     dns.vm.network "private_network", ip: "192.168.58.10",  virtualbox__intnet: "internal"
     # dns.vm.network "private_network", ip: "192.168.57.10", virtualbox__intnet: "internal"
   end #dns
 
   config.vm.define "dhcp" do |dhcp|
-    dhcp.vm.hostname = "dhcp.msg.izv"
+    dhcp.vm.hostname = "dhcp"
     dhcp.vm.network "private_network", ip: "192.168.58.20",  virtualbox__intnet: "internal"
     # dhcp.vm.network "private_network", ip: "192.168.57.10", virtualbox__intnet: "internal"    
   end #dhcp
@@ -28,7 +28,7 @@ Vagrant.configure("2") do |config|
 
   # Provisioning con Ansible
   #config.vm.provision "ansible" do |ansible|
-  #  ansible.compatibility_mode = "auto"
-  #  ansible.playbook = "playbooks/playbook-setup.yaml"
-  # end
+  # ansible.compatibility_mode = "auto"
+  # ansible.playbook = "playbooks/playbook-setup.yaml"
+  #end #ansible
 end

@@ -85,7 +85,6 @@
 # ======================================================
 # CREATE TSIGG KEY
 # ======================================================
----
 - name: Generate TSIG key on DNS
   hosts: dns
   become: true
@@ -108,7 +107,7 @@
       register: tsig_output
       when: not tsig_stat.stat.exists
 
-    - name: Save TSIG key to file
+    - name: Save TSIG key to /etc/bind/ddns.key
       ansible.builtin.copy:
         dest: /etc/bind/ddns.key
         content: "{{ tsig_output.stdout }}"
@@ -116,6 +115,32 @@
         group: bind
         mode: "0600"
       when: not tsig_stat.stat.exists
+
+    - name: Read TSIG key content
+      ansible.builtin.slurp:
+        src: /etc/bind/ddns.key
+      register: slurped_tsig
+
+    - name: Remove old TSIG block if exists
+      ansible.builtin.blockinfile:
+        path: /etc/bind/named.conf.options
+        marker: "# === DDNS KEY BLOCK ==="
+        state: absent
+
+    - name: Insert TSIG key block into named.conf.options
+      ansible.builtin.blockinfile:
+        path: /etc/bind/named.conf.options
+        marker: "# === DDNS KEY BLOCK ==="
+        block: "{{ slurped_tsig.content | b64decode }}"
+      notify: restart bind9
+      when: slurped_tsig is defined and slurped_tsig.content | length > 0
+
+  handlers:
+    - name: restart bind9
+      ansible.builtin.service:
+        name: bind9
+        state: restarted
+
 
 - name: Copy TSIG key from DNS to DHCP
   hosts: dhcp
@@ -135,6 +160,7 @@
         dest: /tmp/ddns.key
         flat: true
       delegate_to: dns
+      run_once: true
 
     - name: Copy TSIG key into DHCP directory
       ansible.builtin.copy:
@@ -151,13 +177,14 @@
   hosts: dns
   become: true
   tasks:
+
     - name: Configuring local zones file
       ansible.builtin.copy:
         src: ../files/dns/named.conf.local
         dest: /etc/bind/named.conf.local
         owner: root
         group: bind
-        mode: "0640"  # root puede leer/escribir, bind puede leer, nadie más puede
+        mode: "0640"
         backup: true
 
     - name: Configuring direct zone file
@@ -166,26 +193,51 @@
         dest: /var/lib/bind/db.mario.test
         owner: root
         group: bind
-        mode: "0640"  # root puede leer/escribir, bind puede leer, nadie más puede
+        mode: "0644"  
         backup: true
 
     - name: Configuring reverse zone file
       ansible.builtin.copy:
-        src: ../files/dns/db.127
-        dest: /var/lib/bind/db.127
+        src: ../files/dns/db.192
+        dest: /var/lib/bind/db.192
         owner: root
         group: bind
-        mode: "0640"  # root puede leer/escribir, bind puede leer, nadie más puede
+        mode: "0644" 
         backup: true
 
+    # ---- PERMISOS -----
+    - name: Ensure correct permissions on /var/lib/bind directory
+      ansible.builtin.file:
+        path: /var/lib/bind
+        owner: root
+        group: bind
+        mode: "2750"
+        state: directory
+
+    # estos dos aseguran que nada rompe DDNS
+    - name: Ensure correct permissions on direct zone file
+      ansible.builtin.file:
+        path: /var/lib/bind/db.mario.test
+        owner: root
+        group: bind
+        mode: "0644"
+
+    - name: Ensure correct permissions on reverse zone file
+      ansible.builtin.file:
+        path: /var/lib/bind/db.192
+        owner: root
+        group: bind
+        mode: "0644"
+
+    # ---- VALIDATIONS -----
     - name: Validate named configuration
-      ansible.builtin.command: named-checkconf /etc/bind/named.conf.local
+      ansible.builtin.command: named-checkconf
 
     - name: Validate direct zone
       ansible.builtin.command: named-checkzone "mario.test" /var/lib/bind/db.mario.test
 
     - name: Validate reverse zone
-      ansible.builtin.command: named-checkzone "58.168.192.in-addr.arpa" /var/lib/bind/db.127
+      ansible.builtin.command: named-checkzone "58.168.192.in-addr.arpa" /var/lib/bind/db.192
 
     - name: Enabling the service and restarting the service
       ansible.builtin.systemd:
