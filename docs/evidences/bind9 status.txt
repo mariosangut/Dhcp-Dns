@@ -1,0 +1,22 @@
+● named.service - BIND Domain Name Server
+     Loaded: loaded (/lib/systemd/system/named.service; enabled; preset: enabled)
+     Active: active (running) since Mon 2025-11-17 17:02:22 CET; 2min 32s ago
+       Docs: man:named(8)
+   Main PID: 9306 (named)
+     Status: "running"
+      Tasks: 8 (limit: 2096)
+     Memory: 78.6M
+        CPU: 79ms
+     CGroup: /system.slice/named.service
+             └─9306 /usr/sbin/named -f -u bind
+
+Nov 17 17:02:22 dns named[9306]: running
+Nov 17 17:02:22 dns systemd[1]: Started named.service - BIND Domain Name Server.
+Nov 17 17:02:32 dns named[9306]: resolver priming query complete: timed out
+Nov 17 17:02:32 dns named[9306]: managed-keys-zone: Unable to fetch DNSKEY set '.': timed out
+Nov 17 17:03:01 dns named[9306]: client @0xffff8a700098 192.168.58.20#7905/key ddns-key: signer "ddns-key" approved
+Nov 17 17:03:01 dns named[9306]: client @0xffff8a700098 192.168.58.20#7905/key ddns-key: updating zone 'mario.test/IN': adding an RR at 'cliente1.mario.test' A 192.168.58.100
+Nov 17 17:03:01 dns named[9306]: client @0xffff8a700098 192.168.58.20#7905/key ddns-key: updating zone 'mario.test/IN': adding an RR at 'cliente1.mario.test' TXT "00b0699f5fbf7d18d84492607ecc412bcb"
+Nov 17 17:03:01 dns named[9306]: client @0xffff8a700098 192.168.58.20#7905/key ddns-key: signer "ddns-key" approved
+Nov 17 17:03:01 dns named[9306]: client @0xffff8a700098 192.168.58.20#7905/key ddns-key: updating zone '58.168.192.in-addr.arpa/IN': deleting rrset at '100.58.168.192.in-addr.arpa' PTR
+Nov 17 17:03:01 dns named[9306]: client @0xffff8a700098 192.168.58.20#7905/key ddns-key: updating zone '58.168.192.in-addr.arpa/IN': adding an RR at '100.58.168.192.in-addr.arpa' PTR cliente1.mario.test.

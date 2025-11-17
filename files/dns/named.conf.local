@@ -6,6 +6,6 @@ zone "mario.test" IN {
 
 zone "58.168.192.in-addr.arpa" IN {
         type master;
-        file "/var/lib/bind/db.192";
+        file "/var/lib/bind/db.192.168.58";
         allow-update { key "ddns-key"; };
 };
